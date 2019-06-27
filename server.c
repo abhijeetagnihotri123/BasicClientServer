@@ -1,51 +1,54 @@
-#include <unistd.h>
+#include <netdb.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#define port 3940
+#include <stdlib.h>
+#include <unistd.h>
+
+#define PORT 8080
 int main(int argc,char *argv[])
 {   
-    int server_sock,new_socket,valread;
-    struct sockaddr_in address;
-    int addrlen=sizeof(address);
-    char buffer[1024];
-    char message[51];
-    strcpy(message,"hello from server\n");
+    int sock;
+    int client_sock;
     int opt=1;
-    strcpy(message,"Hello From Server\n");
-    server_sock=socket(AF_INET,SOCK_STREAM,0);
-    if(server_sock <= 0)
+    struct sockaddr_in server;
+    struct sockaddr_in client;
+    socklen_t client_addr_length;
+    sock=socket(AF_INET,SOCK_STREAM,0);
+    if(sock<0)
     {
-        printf("Socket cannot be initialized\n");
+        printf("Server failed to initialise it's socket\n");
+    }
+    if(setsockopt(sock,SOL_SOCKET,opt,&opt,sizeof(opt))!=0)
+    {
+        printf("Error\n");
+    }
+    bzero(&server,sizeof(server));
+    server.sin_family=AF_INET;
+    server.sin_addr.s_addr=htonl(INADDR_ANY);
+    server.sin_port=htons(PORT);
+    if(bind(sock,(struct sockaddr*)&server,sizeof(server))<0)
+    {
+        printf("Cannot bind\n");
+    }
+    if(listen(sock,1) < 0)
+    {
+        printf("Server unable to listen\n");
     }
     else
     {
-        printf("Socket initialized \n");
+        printf("Server ready to listen to a client\n");
     }
-    if(setsockopt(server_sock,SOL_SOCKET,SO_REUSEADDR | SO_REUSEPORT,&opt,sizeof(opt)) < 0)
+    client_addr_length=sizeof(client);
+    client_sock=accept(sock,(struct sockaddr*)&client,&client_addr_length);
+    if(client_sock<0)
     {
-        printf("Connection error\n");
+        printf("accept failure\n");
     }
-    address.sin_family=AF_INET;
-    address.sin_port=htons(port);
-    address.sin_addr.s_addr=INADDR_ANY;
-    if(bind(server_sock,(struct sockaddr*)&address,sizeof(address)) < 0)
+    else
     {
-        printf("Bind cannot be done\n");
+        printf("server accepted a client\n");
+        close(client_sock);
     }
-    if(listen(server_sock,3)<0)
-    {
-        printf("Cannot listen\n");
-    }
-    if((new_socket = accept(server_sock, (struct sockaddr *)&address,(socklen_t*)&addrlen))<0)
-    {
-        printf("Problem in accepting\n");
-    }
-    valread = read(new_socket,buffer,1024);
-    printf("%s\n",buffer);
-    send(new_socket,message,strlen(message),0);
-    printf("Message sent\n");
+    close(sock);
     return 0;
 }

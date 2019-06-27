@@ -1,45 +1,36 @@
 #include <stdio.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <stdlib.h>
+#include <netdb.h>
 #include <string.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 #define PORT 8080
 int main(int argc,char *argv[])
 {   
-    int sock,valread;
-    char hello[51];
-    char buffer[1024];
-    strcpy(hello,"Hello World from client!\n");
+    char *SERVER_ADDR="localhost";   
+    int sock;
     struct sockaddr_in serv_addr;
+    struct hostent *he = gethostbyname(SERVER_ADDR);
+	unsigned long serv_addr_no = *(unsigned long *)(he->h_addr_list[0]);
+
     sock=socket(AF_INET,SOCK_STREAM,0);
     if(sock<0)
     {
-        printf("socket cannot be initialised\n");
+        printf("Socket initialisation failed\n");
     }
-    else
-    {
-        printf("Socket initialization completed\n");
-    }
+    bzero(&serv_addr,sizeof(serv_addr));
     serv_addr.sin_family=AF_INET;
     serv_addr.sin_port=htons(PORT);
-    if(inet_pton(AF_INET,"127.0.0.1",&serv_addr.sin_addr) <=0)
-    {
-        printf("Invalid address\n");
-    }
-    else
-    {
-        printf("Valid address\n");
-    }
-    if(connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    serv_addr.sin_addr.s_addr=serv_addr_no;
+    if(connect(sock,(struct sockaddr*)&serv_addr,sizeof(serv_addr))<0)
     {
         printf("Connection failed\n");
     }
     else
     {
-        printf("Connection established\n");
+        printf("connection has been established\n");
     }
-    send(sock,hello,strlen(hello),0);
-    printf("Hello World sent\n");
-    valread=read(sock,buffer,1024); 
+    close(sock);
     return 0;
 }
